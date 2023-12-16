@@ -334,7 +334,7 @@ int main(int argc, char** argv) {
 
     }
     else {
-        std::cerr << "WRONG OPTION ARG\n";
+        std::cerr << "WRONG OPTION ARG\n"; 
         exit(1);
     }
 
