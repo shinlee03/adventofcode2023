@@ -81,6 +81,87 @@ void dfs(int x, int y, int group, vector<vector<char>>& b, vector<vector<int>>& 
     }
 }
 
+struct line{
+    long long sx;
+    long long ex;
+    long long sy;
+    long long ey;
+};
+
+bool xcmp(line a, line b){
+    return a.sx == b.sx? a.sy < b.sy : a.sx < b.sx;
+}
+bool ycmp(line a, line b){
+    return a.sy == b.sy? a.sx < b.sx : a.sy < b.sy;
+}
+
+template <bool T>
+class lineGroups{
+public:
+    vector<line>lines;
+    void push_back(const line& l){
+        if(_push_back(l)) _sort();
+    }
+    
+    void debug_print_all_lines(){
+        std::cout << (T? "X-lines" : "Y-lines") << "\n";
+        for(auto l: lines){
+            std::cout << (T? l.sx : l.sy) << "~" << (T? l.ex : l.ey) << (T? " y= " : " x= ") << (T? l.sy : l.sx) << "\n";
+        }
+    }
+private:
+    bool _push_back(const line& l){
+            //find if there are mergable lines.
+            // a line is mergable iff:
+            //x-line: ex1 >= sx2 || ex2 >= sx1. 
+            //y-line: ey1 >= sy2 || ey2 >= sy1
+            for(int i=0;i<lines.size();i++){
+                if(T) {
+                    if(lines[i].sy != l.sy)continue; //needs to be on same place!
+                    else if(lines[i].ex >= l.sx && lines[i].sx <= l.sx){
+                        std::cout << "at y= " << lines[i].sy << "...\n";
+                        //update lines[i]'s endpoint to l.ex
+                        std::cout << "Merging " << lines[i].sx << "~" << lines[i].ex << " with " << l.sx << "~" << l.ex << " to ";
+                        lines[i].ex = l.ex; //extended
+                        std::cout << lines[i].sx << "~" << lines[i].ex << "\n";
+                        return false;
+                    }
+                    else if(l.ex >= lines[i].sx && l.sx <= lines[i].sx){
+                        std::cout << "at y= " << lines[i].sy << "...\n";
+                        //update lines[i]'s start point to l.sx
+                        std::cout << "Merging " << lines[i].sx<<  "~" << lines[i].ex << " with " << l.sx << "~" << l.ex << " to ";
+                        lines[i].sx = l.sx;
+                        std::cout << lines[i].sx << "~" << lines[i].ex << "\n";
+                        return false;
+                    }
+                }
+                else {
+                    if(lines[i].sx != l.sx)continue;
+                    else if(lines[i].ey >= l.sy && lines[i].sy <= l.sy){
+                        std::cout << "at x= " << lines[i].sx << "...\n";
+                        //update lines[i]'s endpoint to l.ey
+                        std::cout << "Merging " << lines[i].sy << "~" << lines[i].ey << " with " << l.sy << "~" << l.ey << " to ";
+                        lines[i].ey = l.ey; //extended
+                        std::cout << lines[i].sy << "~" << lines[i].ey << "\n";
+                        return false;
+                    }
+                    else if(l.ey >= lines[i].sy && l.sy <= lines[i].sy){
+                        std::cout << "at x= " << lines[i].sx << "...\n";
+                        std::cout << "Merging " << lines[i].sy  << "~" << lines[i].ey << " with " << l.sy << "~" << l.ey << " to ";
+                        //update lines[i]'s start point to l.sy
+                        lines[i].sy = l.sy;
+                        std::cout << lines[i].sy << "~" << lines[i].ey << "\n";
+                        return false;
+                    }
+                }
+            }
+            lines.push_back(l);
+            return true;
+        }
+    void _sort(){
+        std::sort(lines.begin(), lines.end(), T?xcmp:ycmp);
+    }
+};
 
 int main(int argc, char** argv){
 
@@ -181,15 +262,67 @@ int main(int argc, char** argv){
 
     }else {
 
-        //because numbers are so big, we have to think line-wise
-        
-        
+        //because numbers are so big, we have to think line-wise!
 
+        //construct line objects, with starting x value and ending y value.
 
-        while(getline(f, s)){
+        //Each lines get a certain amount of sharps
 
+        //IF the lines meet each other, they must be merged! (or else it will be wonky and double count stuff)
+        //Notice that all lines are either in x direction or y direction.
+
+        //For each lines, if there exists four pairs of line l1, l2, l3, l4 such that they surround an area, we can add them.
+
+        //we pick two from x-dir, two from y-dir.
+        //So time complexity is actually O((N/2*N/2) * (N/2*N/2)) = (N^4/16). Which isn't too bad, right...?
+        //right...?
+
+        lineGroups<true>x_lines;
+        lineGroups<false>y_lines;
+        vector<std::pair<char, long long>>v;
+
+        while(getline(f,s)){
+            v.push_back(parse(s));
+        }
+
+        long long x = 0;
+        long long y = 0;
+        for(auto p: v){
+
+            line l = {x,0,y,0};
+
+            x += (p.first=='D'? p.second : p.first=='U'? -1 * p.second : 0);
+            y += (p.first == 'R'? p.second : p.first =='L'? -1*p.second : 0);
+
+            l.ex = x;
+            l.ey = y;
+
+            if(l.ex==l.sx){
+                if(l.sy > l.ey) std::swap(l.sy, l.ey);
+                y_lines.push_back(l);
+            }
+            else{
+                if(l.sx > l.ex) std::swap(l.sx, l.ex);
+                x_lines.push_back(l);
+            } 
+        }
+
+        //line processing check (debug)
+
+        x_lines.debug_print_all_lines();
+        y_lines.debug_print_all_lines();
+
+        //recursively call and see if we can "enclose" an area!
+
+        std::vector<bool>xcheck(x_lines.lines.size(), false);
+        std::vector<bool>ycheck(y_lines.lines.size(), false);
+
+        for(int i=0;i<x_lines.lines.size();i++){
+            if(!xcheck[i]) ans += solve(x_lines, y_lines, xcheck, ycheck);
         }
     }
+
+
     
     std::cout << "answer is " << ans << std::endl;
     
